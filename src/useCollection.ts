@@ -152,7 +152,7 @@ export const useCollection = <
 >(
     path: string,
     options?: Options<Document<Data>[], TransData>,
-    query?: CollectionQueryType,
+    query?: CollectionQueryType<Document<Data>>,
 ) => {
     const {firestore} = useFirestore();
     const queryClient = useQueryClient();
