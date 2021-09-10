@@ -14,6 +14,12 @@ const { data } = useDocument('users/fernando')
 
 You can now fetch, add, and mutate Firestore data with zero boilerplate.
 
+## Credit
+
+I'd like to thank [(@fernandotherojo)](https://twitter.com/fernandotherojo), this repo is a fork from his swr-firestore repo. all i did was migrating the core logic from swr to react query
+
+make sure to check his repo: https://github.com/nandorojo/swr-firestore
+
 ## Features
 
 - Shared state / cache between collection and document queries [(instead of Redux??)](#shared-global-state-between-documents-and-collections)
@@ -364,12 +370,6 @@ Whoa, `isHungry` is now true. But what happens to the original document query? W
 `swr-firestore` uses document `id` fields to sync any collection queries with existing document queries across your app.
 
 That means that **if you somehow fetch the same document twice, the latest version will update everywhere.**
-
-## Credit
-
-I'd like to thank [(@fernandotherojo)](https://twitter.com/fernandotherojo), this repo is a fork from his swr-firestore repo. all i did was migrating the core logic from swr to react query
-
-make sure to check his repo: https://github.com/nandorojo/swr-firestore
 
 ## License
 
