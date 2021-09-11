@@ -301,7 +301,7 @@ if (data) {
 const id = data?.id //  string | undefined
 const name = data?.name // string | undefined
 const exists = data?.exists // boolean | undefined
-const hasPendingWrites = data?.hasPendingWrites // boolean | undefind
+const hasPendingWrites = data?.hasPendingWrites // boolean | undefined
 ```
 
 ### useCollection
