@@ -1,4 +1,4 @@
-import {UseQueryOptions} from "react-query";
+import {UseQueryOptions, UseInfiniteQueryOptions} from "react-query";
 import {
     FieldPath,
     WhereFilterOp,
@@ -24,6 +24,12 @@ export type Document<T = unknown> = T & {
 };
 
 export type Options<Doc, TData> = UseQueryOptions<Doc, Error, TData>;
+
+export type InfiniteOptions<Doc, TData> = UseInfiniteQueryOptions<
+    Doc,
+    Error,
+    TData
+>;
 
 export type ListenerReturnType<Doc extends Document = Document> = {
     initialData: Doc;
