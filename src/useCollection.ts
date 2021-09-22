@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {QueryClient, useQuery, useQueryClient} from "react-query";
+import {QueryClient, useMutation, useQuery, useQueryClient} from "react-query";
 import {FieldPath, FirebaseFirestore, Query} from "@firebase/firestore-types";
 
 import {useFirestore} from "./Provider";
@@ -240,6 +240,43 @@ export const useCollection = <
         notifyOnChangeProps: "tracked",
     });
 
+    const {mutateAsync} = useMutation<
+        Document<Data>[],
+        Error,
+        {data: Data | Data[]; subPath?: string}
+    >(
+        async ({data: newData, subPath}) => {
+            if (!path) return Promise.resolve([]);
+            const newPath = subPath ? path + "/" + subPath : path;
+            const dataArray = Array.isArray(newData) ? newData : [newData];
+
+            const ref = firestore.collection(newPath);
+            const docsToAdd: Document<Data>[] = dataArray.map((doc) => ({
+                ...doc,
+                // generate IDs we can use that in the local cache that match the server
+                id: ref.doc().id,
+            }));
+
+            // add to network
+            const batch = firestore.batch();
+
+            docsToAdd.forEach(({id, ...doc}) => {
+                // take the ID out of the document
+                batch.set(ref.doc(id), doc);
+            });
+
+            await batch.commit();
+
+            return Promise.resolve(docsToAdd);
+        },
+        {
+            // Always refetch after error or success:
+            onSettled: () => {
+                queryClient.invalidateQueries([path, memoQueryString]);
+            },
+        },
+    );
+
     useEffect(() => {
         //should it go before the useQuery?
         return () => {
@@ -263,34 +300,8 @@ export const useCollection = <
      * - It also updates the local cache using react-query's `setQueryData`. This will prove highly convenient over the regular `add` function provided by Firestore.
      * - If the second argument is defined it will be concatinated to path arg as a prefix
      */
-    const add = useCallback(
-        (newData: Data | Data[], subPath?: string) => {
-            if (!path) return null;
-
-            const dataArray = Array.isArray(newData) ? newData : [newData];
-
-            const ref = firestore.collection(
-                subPath ? path + "/" + subPath : path,
-            );
-
-            const docsToAdd: Document<Data>[] = dataArray.map((doc) => ({
-                ...doc,
-                // generate IDs we can use that in the local cache that match the server
-                id: ref.doc().id,
-            })) as Document<Data>[];
-
-            // add to network
-            const batch = firestore.batch();
-
-            docsToAdd.forEach(({id, ...doc}) => {
-                // take the ID out of the document
-                batch.set(ref.doc(id), doc);
-            });
-
-            return batch.commit();
-        },
-        [path, firestore],
-    );
+    const add = async (newData: Data | Data[], subPath?: string) =>
+        mutateAsync({data: newData, subPath});
 
     const setCache = useCallback(
         (cachedData: TransData[]) => {
