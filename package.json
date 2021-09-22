@@ -1,6 +1,6 @@
 {
     "name": "react-query-firestore",
-    "version": "0.1.2",
+    "version": "0.2.0",
     "description": "React Query for Firestore, that you can actually use in production, on every screen.",
     "main": "lib/commonjs/index.js",
     "module": "lib/module/index.js",
