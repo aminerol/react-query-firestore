@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useRef} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {QueryClient, useQuery, useQueryClient} from "react-query";
 import {FieldPath, FirebaseFirestore, Query} from "@firebase/firestore-types";
 
@@ -28,74 +28,69 @@ const createFirestoreRef = (
         endBefore,
         isCollectionGroup,
     }: CollectionQueryType,
-) =>
-    // { isCollectionGroup = false }: { isCollectionGroup?: boolean } = empty.object
-    {
-        let ref: Query = firestore.collection(path);
+) => {
+    let ref: Query = firestore.collection(path);
 
-        if (isCollectionGroup) {
-            ref = firestore.collectionGroup(path);
+    if (isCollectionGroup) {
+        ref = firestore.collectionGroup(path);
+    }
+
+    if (where) {
+        function multipleConditions(w: WhereType): w is WhereArray {
+            return !!(w as WhereArray) && Array.isArray(w[0]);
         }
-
-        if (where) {
-            function multipleConditions(w: WhereType): w is WhereArray {
-                return !!(w as WhereArray) && Array.isArray(w[0]);
-            }
-            if (multipleConditions(where)) {
-                where.forEach((w) => {
-                    ref = ref.where(w[0] as string | FieldPath, w[1], w[2]);
-                });
-            } else if (
-                typeof where[0] === "string" &&
-                typeof where[1] === "string"
-            ) {
-                ref = ref.where(where[0], where[1], where[2]);
-            }
+        if (multipleConditions(where)) {
+            where.forEach((w) => {
+                ref = ref.where(w[0] as string | FieldPath, w[1], w[2]);
+            });
+        } else if (
+            typeof where[0] === "string" &&
+            typeof where[1] === "string"
+        ) {
+            ref = ref.where(where[0], where[1], where[2]);
         }
+    }
 
-        if (orderBy) {
-            if (typeof orderBy === "string") {
-                ref = ref.orderBy(orderBy);
-            } else if (Array.isArray(orderBy)) {
-                function multipleOrderBy(o: OrderByType): o is OrderByArray[] {
-                    return Array.isArray((o as OrderByArray[])[0]);
-                }
-                if (multipleOrderBy(orderBy)) {
-                    orderBy.forEach(([order, direction]) => {
-                        ref = ref.orderBy(
-                            order as string | FieldPath,
-                            direction,
-                        );
-                    });
-                } else {
-                    const [order, direction] = orderBy;
+    if (orderBy) {
+        if (typeof orderBy === "string") {
+            ref = ref.orderBy(orderBy);
+        } else if (Array.isArray(orderBy)) {
+            function multipleOrderBy(o: OrderByType): o is OrderByArray[] {
+                return Array.isArray((o as OrderByArray[])[0]);
+            }
+            if (multipleOrderBy(orderBy)) {
+                orderBy.forEach(([order, direction]) => {
                     ref = ref.orderBy(order as string | FieldPath, direction);
-                }
+                });
+            } else {
+                const [order, direction] = orderBy;
+                ref = ref.orderBy(order as string | FieldPath, direction);
             }
         }
+    }
 
-        if (startAt) {
-            ref = ref.startAt(startAt);
-        }
+    if (startAt) {
+        ref = ref.startAt(startAt);
+    }
 
-        if (endAt) {
-            ref = ref.endAt(endAt);
-        }
+    if (endAt) {
+        ref = ref.endAt(endAt);
+    }
 
-        if (startAfter) {
-            ref = ref.startAfter(startAfter);
-        }
+    if (startAfter) {
+        ref = ref.startAfter(startAfter);
+    }
 
-        if (endBefore) {
-            ref = ref.endBefore(endBefore);
-        }
+    if (endBefore) {
+        ref = ref.endBefore(endBefore);
+    }
 
-        if (limit) {
-            ref = ref.limit(limit);
-        }
+    if (limit) {
+        ref = ref.limit(limit);
+    }
 
-        return ref;
-    };
+    return ref;
+};
 
 type ListenerReturnType<Doc extends Document = Document> = {
     initialData: Doc[];
@@ -105,16 +100,25 @@ type ListenerReturnType<Doc extends Document = Document> = {
 const createListenerAsync = async <Doc extends Document = Document>(
     firestore: FirebaseFirestore,
     queryClient: QueryClient,
-    path: string,
+    path: string | undefined = undefined,
     queryString: string,
+    ignoreFirestoreDocumentSnapshotField: boolean,
+    setHasNextPage: (value: boolean) => void,
 ): Promise<ListenerReturnType<Doc>> => {
     return new Promise((resolve) => {
+        if (!path) {
+            return resolve({
+                initialData: [],
+                unsubscribe: empty.function,
+            });
+        }
         const query: CollectionQueryType = JSON.parse(queryString) ?? {};
         const ref = createFirestoreRef(firestore, path, query);
         const unsubscribe = ref.onSnapshot(
             {includeMetadataChanges: true},
             (querySnapshot) => {
                 const data: Doc[] = [];
+
                 querySnapshot.forEach((doc) => {
                     const docData = doc.data() ?? empty.object;
                     const docToAdd = {
@@ -122,11 +126,17 @@ const createListenerAsync = async <Doc extends Document = Document>(
                         id: doc.id,
                         exists: doc.exists,
                         hasPendingWrites: doc.metadata.hasPendingWrites,
-                    } as any;
+                        __snapshot: ignoreFirestoreDocumentSnapshotField
+                            ? undefined
+                            : doc,
+                    } as Doc;
                     // update individual docs in the cache
                     queryClient.setQueryData(doc.ref.path, docToAdd);
                     data.push(docToAdd);
                 });
+
+                setHasNextPage(!querySnapshot.empty);
+
                 // resolve initial data
                 resolve({
                     initialData: data,
@@ -147,13 +157,17 @@ const createListenerAsync = async <Doc extends Document = Document>(
  * @param [options] - takes any of useQuery options.
  */
 export const useCollection = <
-    Data extends Record<string, unknown>,
-    TransData = Document<Data>,
+    Data,
+    TransData extends Document<Data> = Document<Data>,
 >(
-    path: string,
-    options?: Options<Document<Data>[], TransData>,
-    query?: CollectionQueryType<Document<Data>>,
+    path?: string,
+    options?: Options<Document<Data>[], TransData[]>,
+    query?: CollectionQueryType<Document<Data>> & {
+        ignoreFirestoreDocumentSnapshotField?: boolean;
+    },
 ) => {
+    const [isFetchingNextPage, setIsFetchingNextPage] = useState(false);
+    const [hasNextPage, setHasNextPage] = useState(true);
     const {firestore} = useFirestore();
     const queryClient = useQueryClient();
     const unsubscribeRef = useRef<ListenerReturnType["unsubscribe"] | null>(
@@ -168,8 +182,8 @@ export const useCollection = <
         startAt,
         orderBy,
         limit,
-        // __unstableCollectionGroup: isCollectionGroup = false,
         isCollectionGroup,
+        ignoreFirestoreDocumentSnapshotField = true,
     } = query || {};
 
     // why not just put this into the ref directly?
@@ -199,21 +213,32 @@ export const useCollection = <
     );
 
     async function fetch() {
+        if (unsubscribeRef.current) {
+            unsubscribeRef.current();
+            unsubscribeRef.current = null;
+        }
         const {unsubscribe, initialData} = await createListenerAsync<
             Document<Data>
-        >(firestore, queryClient, path, memoQueryString);
+        >(
+            firestore,
+            queryClient,
+            path,
+            memoQueryString,
+            ignoreFirestoreDocumentSnapshotField,
+            setHasNextPage,
+        );
         unsubscribeRef.current = unsubscribe;
         return initialData;
     }
 
-    const {data, status, error} = useQuery<Document<Data>[], Error, TransData>(
-        [path, memoQueryString],
-        fetch,
-        {
-            ...options,
-            notifyOnChangeProps: "tracked",
-        },
-    );
+    const {data, status, error} = useQuery<
+        Document<Data>[],
+        Error,
+        TransData[]
+    >([path, memoQueryString], fetch, {
+        ...options,
+        notifyOnChangeProps: "tracked",
+    });
 
     useEffect(() => {
         //should it go before the useQuery?
@@ -234,16 +259,19 @@ export const useCollection = <
     }, [path, memoQueryString]);
 
     /**
-     * `add(data)`: Extends the Firestore document [`add` function](https://firebase.google.com/docs/firestore/manage-data/add-data).
+     * `add(data, subPath?)`: Extends the Firestore document [`add` function](https://firebase.google.com/docs/firestore/manage-data/add-data).
      * - It also updates the local cache using react-query's `setQueryData`. This will prove highly convenient over the regular `add` function provided by Firestore.
+     * - If the second argument is defined it will be concatinated to path arg as a prefix
      */
     const add = useCallback(
-        (newData: Data | Data[]) => {
+        (newData: Data | Data[], subPath?: string) => {
             if (!path) return null;
 
             const dataArray = Array.isArray(newData) ? newData : [newData];
 
-            const ref = firestore.collection(path);
+            const ref = firestore.collection(
+                subPath ? path + "/" + subPath : path,
+            );
 
             const docsToAdd: Document<Data>[] = dataArray.map((doc) => ({
                 ...doc,
@@ -264,11 +292,68 @@ export const useCollection = <
         [path, firestore],
     );
 
+    const setCache = useCallback(
+        (cachedData: TransData[]) => {
+            queryClient.setQueryData<TransData[]>(
+                [path, memoQueryString],
+                (prevState) => {
+                    if (!prevState) return [];
+                    return [...prevState, ...cachedData];
+                },
+            );
+        },
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [path, memoQueryString],
+    );
+
+    const fetchNextPage = async () => {
+        if (!path || !data?.length) return;
+
+        setIsFetchingNextPage(true);
+
+        // get the snapshot of last document we have right now in our query
+        const startAfterDocument = data[data.length - 1].__snapshot;
+        const ref = createFirestoreRef(
+            firestore,
+            path,
+            JSON.parse(memoQueryString),
+        );
+
+        // get more documents, after the most recent one we have
+        const querySnapshot = await ref.startAfter(startAfterDocument).get();
+        setHasNextPage(!querySnapshot.empty);
+        const moreDocs: TransData[] = [];
+        querySnapshot.docs.forEach((doc) => {
+            const docData = doc.data() ?? empty.object;
+            const docToAdd = {
+                ...docData,
+                id: doc.id,
+                exists: doc.exists,
+                hasPendingWrites: doc.metadata.hasPendingWrites,
+                __snapshot: ignoreFirestoreDocumentSnapshotField
+                    ? undefined
+                    : doc,
+            } as TransData;
+            // update individual docs in the cache
+            queryClient.setQueryData(doc.ref.path, docToAdd);
+            moreDocs.push(docToAdd);
+        });
+
+        // mutate our local cache, adding the docs we just added
+        setCache(moreDocs);
+
+        setIsFetchingNextPage(false);
+    };
+
     return {
         data,
         status,
         error,
         add,
+        setCache,
+        fetchNextPage,
+        isFetchingNextPage,
+        hasNextPage,
         /**
          * A function that, when called, unsubscribes the Firestore listener.
          *

@@ -1,5 +1,9 @@
 import {UseQueryOptions} from "react-query";
-import {FieldPath, WhereFilterOp} from "@firebase/firestore-types";
+import {
+    FieldPath,
+    WhereFilterOp,
+    QueryDocumentSnapshot,
+} from "@firebase/firestore-types";
 
 export const empty = {
     object: {},
@@ -16,6 +20,7 @@ export type Document<T = unknown> = T & {
     id: string;
     exists?: boolean;
     hasPendingWrites?: boolean;
+    __snapshot?: QueryDocumentSnapshot;
 };
 
 export type Options<Doc, TData> = UseQueryOptions<Doc, Error, TData>;
