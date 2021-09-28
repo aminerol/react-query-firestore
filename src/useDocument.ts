@@ -14,13 +14,10 @@ import {useFirestore} from "./Provider";
 function updateCollectionCache<Doc extends Document = Document>(
     queryClient: QueryClient,
     path: string,
-    doc: Doc,
+    docId: string,
     data: any,
 ) {
-    let collection: string | string[] = path
-        .split(`/${doc.id}`)
-        .filter(Boolean);
-    collection.pop(); // remove last item, which is the /id
+    let collection: string | string[] = path.split(`/${docId}`).filter(Boolean);
     collection = collection.join("/");
 
     if (collection) {
@@ -67,7 +64,7 @@ const createListenerAsync = async <Doc extends Document = Document>(
             } as Doc;
             if (!data.hasPendingWrites) {
                 queryClient.setQueryData(path, data);
-                updateCollectionCache(queryClient, path, doc, data);
+                updateCollectionCache(queryClient, path, doc.id, data);
                 resolve({
                     initialData: data,
                     unsubscribe,
@@ -147,9 +144,9 @@ export const useDocument = <Data extends unknown, TransData = Document<Data>>(
     }, [path]);
 
     const setCache = useCallback(
-        (cachedData: Partial<Data>) => {
+        (cachedData: Partial<Document<Data>>) => {
             if (!path) return;
-            return queryClient.setQueryData<Partial<Data>>(
+            const newData = queryClient.setQueryData<Partial<Document<Data>>>(
                 path,
                 (prevState) => {
                     return {
@@ -158,6 +155,7 @@ export const useDocument = <Data extends unknown, TransData = Document<Data>>(
                     };
                 },
             );
+            updateCollectionCache(queryClient, path, newData.id || "", newData);
         },
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [path],
