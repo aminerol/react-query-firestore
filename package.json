@@ -4,7 +4,7 @@
     "description": "React Query for Firestore, that you can actually use in production, on every screen.",
     "main": "lib/commonjs/index.js",
     "module": "lib/module/index.js",
-    "types": "lib/typescript/index.d.ts",
+    "types": "lib/typescript/src/index.d.ts",
     "react-native": "src/index.ts",
     "files": [
         "src",
