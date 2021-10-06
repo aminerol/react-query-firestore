@@ -53,7 +53,7 @@ const createListenerAsync = async <Doc extends Document = Document>(
     if (!path) {
         return {unsubscribe: empty.function, initialData: empty.object as Doc};
     }
-    return await new Promise((resolve) => {
+    return await new Promise((resolve, reject) => {
         const unsubscribe = firestore.doc(path).onSnapshot((doc) => {
             const docData = doc.data() ?? empty.object;
             const data = {
@@ -70,7 +70,7 @@ const createListenerAsync = async <Doc extends Document = Document>(
                     unsubscribe,
                 });
             }
-        });
+        }, reject);
     });
 };
 

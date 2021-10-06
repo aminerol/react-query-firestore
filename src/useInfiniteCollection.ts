@@ -118,7 +118,7 @@ const createListenerAsync = async <Doc extends Document = Document>(
     queryString: string,
     pageParam: any,
 ): Promise<ListenerReturnType<Doc>> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         if (!path) {
             return resolve({
                 response: {
@@ -134,30 +134,33 @@ const createListenerAsync = async <Doc extends Document = Document>(
         }
         const unsubscribe = ref.onSnapshot(
             {includeMetadataChanges: false},
-            async (querySnapshot) => {
-                const data: Doc[] = [];
+            {
+                next: (querySnapshot) => {
+                    const data: Doc[] = [];
 
-                querySnapshot.forEach((doc) => {
-                    const docData = doc.data() ?? empty.object;
-                    const docToAdd = {
-                        ...docData,
-                        id: doc.id,
-                        exists: doc.exists,
-                        hasPendingWrites: doc.metadata.hasPendingWrites,
-                        __snapshot: doc,
-                    } as Doc;
-                    // update individual docs in the cache
-                    queryClient.setQueryData(doc.ref.path, docToAdd);
-                    data.push(docToAdd);
-                });
+                    querySnapshot.forEach((doc) => {
+                        const docData = doc.data() ?? empty.object;
+                        const docToAdd = {
+                            ...docData,
+                            id: doc.id,
+                            exists: doc.exists,
+                            hasPendingWrites: doc.metadata.hasPendingWrites,
+                            __snapshot: doc,
+                        } as Doc;
+                        // update individual docs in the cache
+                        queryClient.setQueryData(doc.ref.path, docToAdd);
+                        data.push(docToAdd);
+                    });
 
-                resolve({
-                    response: {
-                        data,
-                        lastDoc: data[data.length - 1]?.__snapshot,
-                    },
-                    unsubscribe,
-                });
+                    resolve({
+                        response: {
+                            data,
+                            lastDoc: data[data.length - 1]?.__snapshot,
+                        },
+                        unsubscribe,
+                    });
+                },
+                error: reject,
             },
         );
     });

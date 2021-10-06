@@ -105,7 +105,7 @@ const createListenerAsync = async <Doc extends Document = Document>(
     ignoreFirestoreDocumentSnapshotField: boolean,
     setHasNextPage: (value: boolean) => void,
 ): Promise<ListenerReturnType<Doc>> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         if (!path) {
             return resolve({
                 initialData: [],
@@ -116,34 +116,37 @@ const createListenerAsync = async <Doc extends Document = Document>(
         const ref = createFirestoreRef(firestore, path, query);
         const unsubscribe = ref.onSnapshot(
             {includeMetadataChanges: true},
-            (querySnapshot) => {
-                const data: Doc[] = [];
+            {
+                next: (querySnapshot) => {
+                    const data: Doc[] = [];
 
-                querySnapshot.forEach((doc) => {
-                    const docData = doc.data() ?? empty.object;
-                    const docToAdd = {
-                        ...docData,
-                        id: doc.id,
-                        exists: doc.exists,
-                        hasPendingWrites: doc.metadata.hasPendingWrites,
-                        __snapshot: ignoreFirestoreDocumentSnapshotField
-                            ? undefined
-                            : doc,
-                    } as Doc;
-                    // update individual docs in the cache
-                    queryClient.setQueryData(doc.ref.path, docToAdd);
-                    data.push(docToAdd);
-                });
+                    querySnapshot.forEach((doc) => {
+                        const docData = doc.data() ?? empty.object;
+                        const docToAdd = {
+                            ...docData,
+                            id: doc.id,
+                            exists: doc.exists,
+                            hasPendingWrites: doc.metadata.hasPendingWrites,
+                            __snapshot: ignoreFirestoreDocumentSnapshotField
+                                ? undefined
+                                : doc,
+                        } as Doc;
+                        // update individual docs in the cache
+                        queryClient.setQueryData(doc.ref.path, docToAdd);
+                        data.push(docToAdd);
+                    });
 
-                setHasNextPage(!querySnapshot.empty);
+                    setHasNextPage(!querySnapshot.empty);
 
-                // resolve initial data
-                resolve({
-                    initialData: data,
-                    unsubscribe,
-                });
-                // update on listener fire
-                queryClient.setQueryData([path, queryString], data);
+                    // resolve initial data
+                    resolve({
+                        initialData: data,
+                        unsubscribe,
+                    });
+                    // update on listener fire
+                    queryClient.setQueryData([path, queryString], data);
+                },
+                error: reject,
             },
         );
     });
