@@ -106,3 +106,5 @@ export type CollectionQueryType<Doc extends Document = Document> = {
     // startAfter?: number | DocumentSnapshot
     // endBefore?: number | DocumentSnapshot
 };
+
+export type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;

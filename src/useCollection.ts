@@ -13,6 +13,7 @@ import {
     OrderByType,
     WhereArray,
     WhereType,
+    Optional,
 } from "./types";
 
 const createFirestoreRef = (
@@ -159,12 +160,9 @@ const createListenerAsync = async <Doc extends Document = Document>(
  * @param [query] - Dictionary with options to query the collection.
  * @param [options] - takes any of useQuery options.
  */
-export const useCollection = <
-    Data,
-    TransData extends Document<Data> = Document<Data>,
->(
+export const useCollection = <Data, TransData = unknown>(
     path?: string,
-    options?: Options<Document<Data>[], TransData[]>,
+    options?: Options<Document<Data>[], Optional<Document<TransData>, "id">[]>,
     query?: CollectionQueryType<Document<Data>> & {
         ignoreFirestoreDocumentSnapshotField?: boolean;
     },
@@ -237,7 +235,7 @@ export const useCollection = <
     const {data, status, error} = useQuery<
         Document<Data>[],
         Error,
-        TransData[]
+        Optional<Document<TransData>, "id">[]
     >([path, memoQueryString], fetch, {
         ...options,
         notifyOnChangeProps: "tracked",
@@ -347,7 +345,7 @@ export const useCollection = <
                 __snapshot: ignoreFirestoreDocumentSnapshotField
                     ? undefined
                     : doc,
-            } as TransData;
+            } as Document<TransData>;
             // update individual docs in the cache
             queryClient.setQueryData(doc.ref.path, docToAdd);
             moreDocs.push(docToAdd);
