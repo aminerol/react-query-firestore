@@ -64,7 +64,6 @@ const createListenerAsync = async <Doc extends Document = Document>(
                     exists: doc.exists,
                     hasPendingWrites: doc.metadata.hasPendingWrites,
                 } as Doc;
-                console.log(data.hasPendingWrites);
                 if (!data.hasPendingWrites) {
                     queryClient.setQueryData(path, data);
                     updateCollectionCache(queryClient, path, doc.id, data);
