@@ -54,23 +54,28 @@ const createListenerAsync = async <Doc extends Document = Document>(
         return {unsubscribe: empty.function, initialData: empty.object as Doc};
     }
     return await new Promise((resolve, reject) => {
-        const unsubscribe = firestore.doc(path).onSnapshot((doc) => {
-            const docData = doc.data() ?? empty.object;
-            const data = {
-                ...docData,
-                id: doc.id,
-                exists: doc.exists,
-                hasPendingWrites: doc.metadata.hasPendingWrites,
-            } as Doc;
-            if (!data.hasPendingWrites) {
-                queryClient.setQueryData(path, data);
-                updateCollectionCache(queryClient, path, doc.id, data);
-                resolve({
-                    initialData: data,
-                    unsubscribe,
-                });
-            }
-        }, reject);
+        const unsubscribe = firestore.doc(path).onSnapshot(
+            {includeMetadataChanges: true},
+            (doc) => {
+                const docData = doc.data() ?? empty.object;
+                const data = {
+                    ...docData,
+                    id: doc.id,
+                    exists: doc.exists,
+                    hasPendingWrites: doc.metadata.hasPendingWrites,
+                } as Doc;
+                console.log(data.hasPendingWrites);
+                if (!data.hasPendingWrites) {
+                    queryClient.setQueryData(path, data);
+                    updateCollectionCache(queryClient, path, doc.id, data);
+                    resolve({
+                        initialData: data,
+                        unsubscribe,
+                    });
+                }
+            },
+            reject,
+        );
     });
 };
 
