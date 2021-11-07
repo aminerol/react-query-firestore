@@ -1,6 +1,11 @@
 import React from "react";
 import {QueryClient, QueryClientProvider, DefaultOptions} from "react-query";
+import {persistQueryClient} from "react-query/persistQueryClient-experimental";
+import {createAsyncStoragePersistor} from "react-query/createAsyncStoragePersistor-experimental";
 import {FirebaseFirestore} from "@firebase/firestore-types";
+import stringify from "fast-safe-stringify";
+
+import {Storage} from "./types";
 
 function createCtx<A extends unknown | null>() {
     const ctx = React.createContext<A | undefined>(undefined);
@@ -24,6 +29,18 @@ interface ProviderProps {
 }
 
 const queryClient = new QueryClient();
+const enablePersistence = (storage: Storage) => {
+    const asyncStoragePersistor = createAsyncStoragePersistor({
+        storage,
+        serialize: stringify,
+    });
+
+    persistQueryClient({
+        queryClient,
+        persistor: asyncStoragePersistor,
+    });
+};
+
 const ReactQueryFirestoreProvider = ({
     children,
     reactQueryConfig,
@@ -39,4 +56,4 @@ const ReactQueryFirestoreProvider = ({
     );
 };
 
-export {useFirestore, ReactQueryFirestoreProvider};
+export {useFirestore, ReactQueryFirestoreProvider, enablePersistence};

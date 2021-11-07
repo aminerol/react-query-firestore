@@ -86,6 +86,7 @@
         ]
     },
     "dependencies": {
-        "react-query": "^3.21.1"
+        "fast-safe-stringify": "^2.1.1",
+        "react-query": "^3.31.0"
     }
 }
