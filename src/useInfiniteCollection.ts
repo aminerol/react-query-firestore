@@ -25,6 +25,7 @@ import {
     WhereArray,
     WhereType,
 } from "./types";
+import {parseDates} from "./utils";
 
 const createFirestoreRef = (
     firestore: FirebaseFirestore,
@@ -140,6 +141,7 @@ const createListenerAsync = async <Doc extends Document = Document>(
 
                     querySnapshot.forEach((doc) => {
                         const docData = doc.data() ?? empty.object;
+                        parseDates(docData);
                         const docToAdd = {
                             ...docData,
                             id: doc.id,

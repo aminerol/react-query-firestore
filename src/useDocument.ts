@@ -10,6 +10,7 @@ import {collectionCache} from "./Cache";
 import {ListenerReturnType, AllowType, Document, empty, Options} from "./types";
 import {useHelpers} from "./useHelpers";
 import {useFirestore} from "./Provider";
+import {parseDates} from "./utils";
 
 function updateCollectionCache<Doc extends Document = Document>(
     queryClient: QueryClient,
@@ -58,6 +59,7 @@ const createListenerAsync = async <Doc extends Document = Document>(
             {includeMetadataChanges: true},
             (doc) => {
                 const docData = doc.data() ?? empty.object;
+                parseDates(docData);
                 const data = {
                     ...docData,
                     id: doc.id,
