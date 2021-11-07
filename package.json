@@ -1,92 +1,92 @@
 {
-    "name": "react-query-firestore",
-    "version": "0.2.1",
-    "description": "React Query for Firestore, that you can actually use in production, on every screen.",
-    "main": "lib/commonjs/index.js",
-    "module": "lib/module/index.js",
-    "types": "lib/typescript/src/index.d.ts",
-    "react-native": "src/index.ts",
-    "files": [
-        "src",
-        "lib"
-    ],
-    "scripts": {
-        "lint": "eslint --ext .ts,.tsx .",
-        "format": "prettier --write '{.,src/**}/*.{ts,tsx}'",
-        "prepare": "npx husky install && bob build",
-        "release": "release-it"
+  "name": "react-query-firestore",
+  "version": "0.2.1",
+  "description": "React Query for Firestore, that you can actually use in production, on every screen.",
+  "main": "lib/commonjs/index.js",
+  "module": "lib/module/index.js",
+  "types": "lib/typescript/src/index.d.ts",
+  "react-native": "src/index.ts",
+  "files": [
+    "src",
+    "lib"
+  ],
+  "scripts": {
+    "lint": "eslint --ext .ts,.tsx .",
+    "format": "prettier --write '{.,src/**}/*.{ts,tsx}'",
+    "prepare": "npx husky install && bob build",
+    "release": "release-it"
+  },
+  "keywords": [
+    "react",
+    "react-native",
+    "ios",
+    "android",
+    "web",
+    "react query",
+    "firestore",
+    "firebase"
+  ],
+  "repository": "https://github.com/aminerol/react-query-firestore",
+  "author": "Amine Bl (https://github.com/aminerol)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/aminerol/react-query-firestore/issues"
+  },
+  "homepage": "https://github.com/aminerol/react-query-firestore#readme",
+  "devDependencies": {
+    "@commitlint/config-conventional": "^13.1.0",
+    "@firebase/firestore-types": "^2.5.0",
+    "@release-it/conventional-changelog": "^3.3.0",
+    "@types/react": "^16.9.19",
+    "commitlint": "^13.1.0",
+    "eslint": "^7.32.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-config-react-native-wcandillon": "^3.6.3",
+    "eslint-plugin-prettier": "^4.0.0",
+    "lint-staged": "^11.1.2",
+    "prettier": "^2.3.2",
+    "react-native-builder-bob": "^0.18.1",
+    "release-it": "^14.11.5",
+    "typescript": "^4.4.2"
+  },
+  "peerDependencies": {
+    "react": "*"
+  },
+  "eslintIgnore": [
+    "node_modules/",
+    "lib/"
+  ],
+  "release-it": {
+    "git": {
+      "commitMessage": "chore: release ${version}",
+      "tagName": "v${version}"
     },
-    "keywords": [
-        "react",
-        "react-native",
-        "ios",
-        "android",
-        "web",
-        "react query",
-        "firestore",
-        "firebase"
-    ],
-    "repository": "https://github.com/aminerol/react-query-firestore",
-    "author": "Amine Bl (https://github.com/aminerol)",
-    "license": "MIT",
-    "bugs": {
-        "url": "https://github.com/aminerol/react-query-firestore/issues"
+    "npm": {
+      "publish": true
     },
-    "homepage": "https://github.com/aminerol/react-query-firestore#readme",
-    "devDependencies": {
-        "@commitlint/config-conventional": "^13.1.0",
-        "@firebase/firestore-types": "^2.5.0",
-        "@react-native-community/bob": "^0.10.1",
-        "@release-it/conventional-changelog": "^3.3.0",
-        "@types/react": "^16.9.19",
-        "commitlint": "^13.1.0",
-        "eslint": "^7.32.0",
-        "eslint-config-prettier": "^8.3.0",
-        "eslint-config-react-native-wcandillon": "^3.6.3",
-        "eslint-plugin-prettier": "^4.0.0",
-        "lint-staged": "^11.1.2",
-        "prettier": "^2.3.2",
-        "release-it": "^14.11.5",
-        "typescript": "^4.4.2"
+    "github": {
+      "release": true
     },
-    "peerDependencies": {
-        "react": "*"
-    },
-    "eslintIgnore": [
-        "node_modules/",
-        "lib/"
-    ],
-    "release-it": {
-        "git": {
-            "commitMessage": "chore: release ${version}",
-            "tagName": "v${version}"
-        },
-        "npm": {
-            "publish": true
-        },
-        "github": {
-            "release": true
-        },
-        "plugins": {
-            "@release-it/conventional-changelog": {
-                "preset": "angular"
-            }
-        }
-    },
-    "publishConfig": {
-        "registry": "https://registry.npmjs.org/"
-    },
-    "@react-native-community/bob": {
-        "source": "src",
-        "output": "lib",
-        "targets": [
-            "commonjs",
-            "module",
-            "typescript"
-        ]
-    },
-    "dependencies": {
-        "fast-safe-stringify": "^2.1.1",
-        "react-query": "^3.31.0"
+    "plugins": {
+      "@release-it/conventional-changelog": {
+        "preset": "angular"
+      }
     }
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "dependencies": {
+    "fast-safe-stringify": "^2.1.1",
+    "react-query": "^3.31.0"
+  },
+  "react-native-builder-bob": {
+    "source": "src",
+    "output": "lib",
+    "targets": [
+      "commonjs",
+      "module",
+      "typescript"
+    ]
+  }
 }
