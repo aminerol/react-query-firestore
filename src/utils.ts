@@ -16,3 +16,10 @@ export function parseDates(obj: DocumentData) {
         }
     });
 }
+
+export function unionBy<T>(arr1: T[], arr2: T[], iteratee: (item: T) => any) {
+    const set = new Set(arr1.map(iteratee));
+    return Array.from(
+        new Set([...arr1, ...arr2.filter((itm) => !set.has(iteratee(itm)))]),
+    );
+}
