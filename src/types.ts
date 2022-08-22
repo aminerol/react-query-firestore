@@ -114,3 +114,12 @@ export interface Storage {
     setItem: (key: string, value: string) => Promise<void>;
     removeItem: (key: string) => Promise<void>;
 }
+
+export interface FirebaseHelpersOptions {
+    /**
+     * If true, the local cache won't be updated. Default `false`.
+     */
+    ignoreLocalMutation?: boolean;
+    identityState?: string;
+    identityField?: string;
+}

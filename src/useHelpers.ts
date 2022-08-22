@@ -3,7 +3,7 @@ import {useQueryClient, QueryClient} from "react-query";
 import {SetOptions} from "@firebase/firestore-types";
 
 import {collectionCache} from "./Cache";
-import {empty} from "./types";
+import {empty, FirebaseHelpersOptions} from "./types";
 import {useFirestore} from "./Provider";
 
 export function useIsMounted() {
@@ -24,6 +24,8 @@ function updateCollectionCache<Doc extends Record<string, unknown>>(
     queryClient: QueryClient,
     path: string,
     callback: (currentState: Doc[], docId?: string) => Doc[],
+    identityState?: string,
+    identityField = "id",
 ) {
     let collection: string | string[] = path.split("/").filter(Boolean);
     const docId = collection.pop(); // remove last item, which is the /doc-id
@@ -31,13 +33,24 @@ function updateCollectionCache<Doc extends Record<string, unknown>>(
 
     collectionCache.getKeysFromCollectionPath(collection).forEach((key) => {
         queryClient.setQueryData(key, (currentState: Doc[] = empty.array) => {
+            const state =
+                identityState && !Array.isArray(currentState)
+                    ? currentState[identityState]
+                    : currentState;
             // don't mutate the current state if it doesn't include this doc
             // why? to prevent creating a new reference of the state
             // creating a new reference could trigger unnecessary re-renders
-            if (!currentState.some((doc) => doc.id === docId)) {
+            if (!state?.some((doc: Doc) => doc[identityField] === docId)) {
                 return currentState;
             }
-            return callback(currentState, docId);
+
+            const queryState = callback(state, docId);
+            return identityState
+                ? {
+                      ...currentState,
+                      [identityState]: queryState,
+                  }
+                : queryState;
         });
     });
 }
@@ -45,6 +58,16 @@ function updateCollectionCache<Doc extends Record<string, unknown>>(
 export const useHelpers = () => {
     const {firestore} = useFirestore();
     const queryClient = useQueryClient();
+
+    /**
+     * `addToCollectionCache(path, queryString?)`: wrapper for addCollectionToCache from internal Cache.
+     * you cann call this when you want to add a collection to the cache if it was not requested
+     * by firestore, e.g. a direct axios call.
+     * so that we can mutate it from document calls later
+     */
+    const addToCollectionCache = (path: string, queryString?: string) => {
+        collectionCache.addCollectionToCache(path, queryString);
+    };
 
     /**
      * `setDocument(path, data, SetOptions?)`: Extends the `firestore` document `set` function.
@@ -56,10 +79,11 @@ export const useHelpers = () => {
         path: string | undefined,
         data: Partial<Data>,
         options?: SetOptions,
-        /**
-         * If true, the local cache won't be updated. Default `false`.
-         */
-        ignoreLocalMutation = false,
+        {
+            ignoreLocalMutation = false,
+            identityState,
+            identityField = "id",
+        }: FirebaseHelpersOptions = {},
     ) => {
         if (!path) return undefined;
 
@@ -84,15 +108,21 @@ export const useHelpers = () => {
             });
         }
 
-        updateCollectionCache(queryClient, path, (currentState, docId) => {
-            return currentState.map((document) => {
-                if (document.id === docId) {
-                    if (!options?.merge) return document;
-                    return {...document, ...data};
-                }
-                return document;
-            });
-        });
+        updateCollectionCache(
+            queryClient,
+            path,
+            (currentState, docId) => {
+                return currentState.map((document) => {
+                    if (document[identityField] === docId) {
+                        if (!options?.merge) return document;
+                        return {...document, ...data};
+                    }
+                    return document;
+                });
+            },
+            identityState,
+            identityField,
+        );
 
         return firestore.doc(path).set(data, options || {});
     };
@@ -104,10 +134,11 @@ export const useHelpers = () => {
     const updateDocument = <Data extends unknown>(
         path: string | undefined,
         data: Partial<Data>,
-        /**
-         * If true, the local cache won't be updated. Default `false`.
-         */
-        ignoreLocalMutation = false,
+        {
+            ignoreLocalMutation = false,
+            identityState,
+            identityField = "id",
+        }: FirebaseHelpersOptions = {},
     ) => {
         if (!path) return undefined;
         const isDocument =
@@ -129,24 +160,31 @@ export const useHelpers = () => {
             });
         }
 
-        updateCollectionCache(queryClient, path, (currentState, docId) => {
-            return currentState.map((document) => {
-                if (document.id === docId) {
-                    return {...document, ...data};
-                }
-                return document;
-            });
-        });
+        updateCollectionCache(
+            queryClient,
+            path,
+            (currentState, docId) => {
+                return currentState.map((document) => {
+                    if (document[identityField] === docId) {
+                        return {...document, ...data};
+                    }
+                    return document;
+                });
+            },
+            identityState,
+            identityField,
+        );
 
         return firestore.doc(path).update(data);
     };
 
     const deleteDocument = (
         path: string | undefined,
-        /**
-         * If true, the local cache won't be updated immediately. Default `false`.
-         */
-        ignoreLocalMutation = false,
+        {
+            ignoreLocalMutation = false,
+            identityState,
+            identityField = "id",
+        }: FirebaseHelpersOptions = {},
     ) => {
         if (!path) return undefined;
 
@@ -160,18 +198,24 @@ export const useHelpers = () => {
 
         if (!ignoreLocalMutation) {
             queryClient.setQueryData(path, null);
+        }
 
-            updateCollectionCache(queryClient, path, (currentState, docId) => {
+        updateCollectionCache(
+            queryClient,
+            path,
+            (currentState, docId) => {
                 return currentState.filter((document) => {
                     if (!document) return false;
-                    if (document.id === docId) {
+                    if (document[identityField] === docId) {
                         // delete this doc
                         return false;
                     }
                     return true;
                 });
-            });
-        }
+            },
+            identityState,
+            identityField,
+        );
 
         return firestore.doc(path).delete();
     };
@@ -180,5 +224,6 @@ export const useHelpers = () => {
         setDocument,
         updateDocument,
         deleteDocument,
+        addToCollectionCache,
     };
 };
